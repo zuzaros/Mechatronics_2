@@ -5,6 +5,9 @@ import cv2
 import numpy as np
 import time
 import cv2.aruco as aruco
+import threading
+import queue
+
 
 # Import functions
 from getCameraFeed import getCameraFeed
@@ -31,7 +34,7 @@ def process_frame(ret, frame):
     sandworm = objectTracking(ids, corners, 1)   # Tracking sandworm
 
     # Create map of environment and overlay live feed
-    createMap(highground, spice, sand, babySpice, sandworm)
+    #createMap(highground, spice, sand, babySpice, sandworm)
 
     map_data = {
         'babySpice': [babySpice],
@@ -41,15 +44,21 @@ def process_frame(ret, frame):
 
     return overlay_frame, highground, spice, sand, babySpice, sandworm
 
+def showMap_thread(highground, spice, sand, babySpice, sandworm):
+    createMap(highground, spice, sand, babySpice, sandworm)
+    time.sleep(2)
+
 def mainLoop():
 
     # initialize the camera feed
     cap = getCameraFeed()
 
+    # Check if the camera feed is available
     if cap is None or not cap.isOpened():
         print("Failed to open camera")
         return
     
+
     # Execute this continuously
     while(True):
         ret, frame = cap.read()  # Capture current frame from the camera
@@ -58,8 +67,15 @@ def mainLoop():
         if result:
             overlay_frame, highground, spice, sand, babySpice, sandworm = result
             cv2.imshow("Live Feed with Overlay", overlay_frame)
+            # if thread is not active Start a thread to show the map
+            #if not threading.active_count() > 1:
+                #map_thread = threading.Thread(target=createMap, args=(highground, spice, sand, babySpice, sandworm))
+                #map_thread.start()
         else:
             break
+
+        #map_thread.join()
+        time.sleep(0.5)
 
         # exit the loop if 'q' key is pressed
         if cv2.waitKey(20) & 0xFF == ord('q'):
@@ -69,5 +85,5 @@ def mainLoop():
     cap.release()
     cv2.destroyAllWindows()
 
-# run the main loop
-mainLoop()
+if __name__ == "__main__":
+    mainLoop()
