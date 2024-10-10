@@ -1,0 +1,8 @@
+__pycache__/createMap.cpython-312.pyc
+__pycache__/detectMarkers.cpython-312.pyc
+__pycache__/getCameraFeed.cpython-312.pyc
+__pycache__/identifyHighground.cpython-312.pyc
+__pycache__/identifySpiceSand.cpython-312.pyc
+__pycache__/objectTracking.cpython-312.pyc
+__pycache__/overlayMap.cpython-312.pyc
+__pycache__/mainLoop.cpython-312.pyc
