@@ -42,8 +42,6 @@ def main():
     else:
         print("Failed to create grid map.")
 
-    print("Grid map created!")
-
     # keep checking if sandworm is in the frame
     # if sandworm is in the frame, call function to move babySpice to highground
     # if sandworm is not in the frame, call function to make babySpice follow the planned trajectory
