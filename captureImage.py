@@ -1,16 +1,14 @@
-# this function captures the camera feed, processes the frame and detect markers
-# it then creates a grid map of highground, spice and sand
-
-#import the necessary libraries
-import cv2
-import time
-
-# Import functions
 from getCameraFeed import getCameraFeed
+import cv2
 
 def captureImage():
     # initialize the camera feed
     cap = getCameraFeed()
+
+    # Check if cap is None
+    if cap is None:
+        print("No camera or video feed available.")
+        return None
 
     # create window
     cv2.namedWindow("Live Feed", cv2.WINDOW_NORMAL)
@@ -23,6 +21,11 @@ def captureImage():
     while True:
         # Capture frame-by-frame
         ret, frame = cap.read()
+
+        # Check if frame is captured successfully
+        if not ret:
+            print("Failed to capture frame or end of video reached.")
+            break
 
         # Display the resulting frame
         cv2.imshow('Live Feed', frame)
