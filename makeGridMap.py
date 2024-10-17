@@ -26,6 +26,10 @@ def create_grid_map():
     # Capture an image from the camera and process it
     capture_image = captureImage()
 
+    # Check if the capture image is None
+    if capture_image is None:
+        print("Failed to capture image.")
+        return None
     # Undistort the captured image
     undistorted_image = cv2.undistort(capture_image, camera_matrix, dist_coeffs)
 
@@ -175,6 +179,7 @@ def create_grid_map():
 
     # Print the map grid (for debugging purposes)
     print("Generated map grid (2=spice, 1=highground, 3=aruco marker, 0=sand):")
+
 
     # Return the map grid
     return map_grid

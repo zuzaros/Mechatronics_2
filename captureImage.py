@@ -2,6 +2,7 @@ from getCameraFeed import getCameraFeed
 import cv2
 
 def captureImage():
+    
     # initialize the camera feed
     cap = getCameraFeed()
 
@@ -13,11 +14,7 @@ def captureImage():
     # create window
     cv2.namedWindow("Live Feed", cv2.WINDOW_NORMAL)
 
-    # Check if the camera feed is available
-    if cap is None or not cap.isOpened():
-        print("Failed to open camera")
-        return None
- 
+    # Display the camera feed in a loop
     while True:
         # Capture frame-by-frame
         ret, frame = cap.read()
@@ -38,10 +35,8 @@ def captureImage():
     cap.release()
     cv2.destroyAllWindows()
 
-    # Return the last processed frame
     return frame
 
-# run
+# Run the captureImage function
 if __name__ == "__main__":
-    # This code will only run if this file is executed directly
     captureImage()
