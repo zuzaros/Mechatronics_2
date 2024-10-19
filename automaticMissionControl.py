@@ -3,7 +3,8 @@
 automaticMissionControl.py
 This file is the main file for the automatic mission control. It is responsible for running the automatic mission control system.
 Functions:
-    automaticMissionControl(): Executes the automatic mission control sequence, including creating a grid map, monitoring for sandworm presence, and managing the mission's progress.
+    automaticMissionControl(): Executes the automatic mission control sequence, 
+    including creating a grid map, monitoring for sandworm presence, and managing the mission's progress.
 Usage:
     This script should be executed directly to run the automatic mission control.
 """
@@ -15,6 +16,8 @@ import time
 
 # import the necessary functions
 from makeGridMap import create_grid_map
+from captureImage import capture_Image
+from monitorBSandSW import monitor_sandworm_and_babyspice
 
 def next_function(map_grid):
     # Process the map grid
@@ -33,14 +36,22 @@ def main():
 
     # create the grid map
     map_grid = create_grid_map()
+    pixels_per_cm_x, pixels_per_cm_y, min_x, min_y = create_grid_map()
 
     print(map_grid)
 
     if map_grid is not None:
-    # Pass the map grid to the next function
+    # Pass the map and parameters to the next function
         next_function(map_grid)
     else:
         print("Failed to create grid map.")
+
+    # initialise collected_spice and camera_feed
+    camera_feed = capture_Image()
+    collected_spice = set() 
+    
+    # Start monitoring sandworm presence and BabySpice's position
+    monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y)
 
     # keep checking if sandworm is in the frame
     # if sandworm is in the frame, call function to move babySpice to highground

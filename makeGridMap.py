@@ -160,7 +160,7 @@ def create_grid_map():
 
 
     # Return the map grid
-    return map_grid
+    return map_grid, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y
 
 if __name__ == "__main__":
     create_grid_map()
