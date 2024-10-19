@@ -10,7 +10,7 @@ from followPath import follow_path
 
 def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y):
     last_checked_time = 0  # Initialize last check time
-    check_interval = 10  # 10 seconds between checks
+    check_interval = 3  # 3 seconds between checks
 
     while True:
         current_time = time.time()
@@ -83,20 +83,7 @@ def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixel
                 print('All spice collected. Mission complete!')
                 break
 
-        # Draw grid lines on the frame
-        grid_rows, grid_cols = map_grid.shape
-        frame_height, frame_width = frame.shape[:2]
-        cell_width = frame_width / grid_cols
-        cell_height = frame_height / grid_rows
-
-        for col in range(1, grid_cols):
-            x = int(col * cell_width)
-            cv2.line(frame, (x, 0), (x, frame_height), (0, 255, 0), 1)
-
-        for row in range(1, grid_rows):
-            y = int(row * cell_height)
-            cv2.line(frame, (0, y), (frame_width, y), (0, 255, 0), 1)
-
+    
         # Display the frame with detected markers and grid lines
         if ids is not None:
             aruco.drawDetectedMarkers(frame, corners, ids)
