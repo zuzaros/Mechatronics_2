@@ -5,15 +5,6 @@ from captureImage import captureImage
 from detectMarkers import detectMarkers
 
 def create_grid_map():
-    # Load camera calibration results
-    calibration_data = np.load('sample_calibration.npz')
-
-    # Debugging: Print the keys in the calibration file
-    print("Keys in the calibration file:", calibration_data.files)
-
-    # Access the camera matrix and distortion coefficients using the correct keys
-    camera_matrix = calibration_data['CM']
-    dist_coeffs = calibration_data['dist_coef']
 
     # Set constants for real-world sizes
     aruco_marker_size = 10  # cm, side length of each ArUco marker
@@ -26,24 +17,11 @@ def create_grid_map():
     # Capture an image from the camera and process it
     capture_image = captureImage()
 
-    # Check if the capture image is None
-    if capture_image is None:
-        print("Failed to capture image.")
-        return None
-    # Undistort the captured image
-    undistorted_image = cv2.undistort(capture_image, camera_matrix, dist_coeffs)
-
     # Convert the undistorted image to grayscale
-    gray = cv2.cvtColor(undistorted_image, cv2.COLOR_BGR2GRAY)
-
-    # Apply sharpening filter to the grayscale image
-    sharpening_kernel = np.array([[-1, -1, -1],
-                                  [-1,  9, -1],
-                                  [-1, -1, -1]])
-    sharpened_gray = cv2.filter2D(gray, -1, sharpening_kernel)
+    gray = cv2.cvtColor(capture_image, cv2.COLOR_BGR2GRAY)
 
     # Apply thresholding to get a binary image for grid classification
-    _, binary = cv2.threshold(sharpened_gray, 50, 255, cv2.THRESH_BINARY)  # Lower threshold value
+    _, binary = cv2.threshold(gray, 110, 255, cv2.THRESH_BINARY)  # Lower threshold value
 
     # Create window
     cv2.namedWindow("Binary Feed", cv2.WINDOW_NORMAL)
@@ -60,11 +38,11 @@ def create_grid_map():
     cv2.destroyAllWindows()
 
     # Detect ArUco markers in the original grayscale image
-    corners, ids = detectMarkers(sharpened_gray)
+    corners, ids = detectMarkers(gray)
 
     # Ensure all corner markers (0,1,2,3) are detected
     required_markers = [0, 1, 2, 3]
-    highground_markers = [6, 7]
+    highground_markers = [6, 7, 8, 9]
     if ids is None:
         print("No markers detected.")
         return None
