@@ -10,26 +10,27 @@ from followPath import follow_path
 
 def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y):
     last_checked_time = 0  # Initialize last check time
-    check_interval = 15  # 15 seconds between checks
+    check_interval = 10  # 10 seconds between checks
 
     while True:
         current_time = time.time()
 
+        # Capture the current frame from the camera feed
+        ret, frame = camera_feed.read()
+
+        if not ret:
+            print("Failed to capture frame.")
+            break
+
+        # Convert the frame to grayscale for ArUco detection
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Detect markers and their poses using the existing detectMarkers function
+        corners, ids = detectMarkers(gray)
+
+        # Perform checks and operations only if the interval has passed
         if current_time - last_checked_time >= check_interval:
             last_checked_time = current_time  # Update last check time
-
-            # Capture the current frame from the camera feed
-            ret, frame = camera_feed.read()
-
-            if not ret:
-                print("Failed to capture frame.")
-                break
-
-            # Convert the frame to grayscale for ArUco detection
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-            # Detect markers and their poses using the existing detectMarkers function
-            corners, ids = detectMarkers(gray)
 
             # Check if the sandworm (marker 5) is in frame
             sandworm_present = False
@@ -71,6 +72,8 @@ def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixel
                 angle = np.degrees(np.arctan2(dy, dx))
 
                 print(f"BabySpice's orientation: {angle:.2f} degrees")
+            else:
+                print("BabySpice not detected.")
 
             # Check if all spice is collected
             spice_cells = np.argwhere(map_grid == 2)
@@ -80,10 +83,24 @@ def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixel
                 print('All spice collected. Mission complete!')
                 break
 
-            # Display the frame with detected markers (for debugging)
-            if ids is not None:
-                aruco.drawDetectedMarkers(frame, corners, ids)
-            cv2.imshow('Mission Control Feed', frame)
+        # Draw grid lines on the frame
+        grid_rows, grid_cols = map_grid.shape
+        frame_height, frame_width = frame.shape[:2]
+        cell_width = frame_width / grid_cols
+        cell_height = frame_height / grid_rows
+
+        for col in range(1, grid_cols):
+            x = int(col * cell_width)
+            cv2.line(frame, (x, 0), (x, frame_height), (0, 255, 0), 1)
+
+        for row in range(1, grid_rows):
+            y = int(row * cell_height)
+            cv2.line(frame, (0, y), (frame_width, y), (0, 255, 0), 1)
+
+        # Display the frame with detected markers and grid lines
+        if ids is not None:
+            aruco.drawDetectedMarkers(frame, corners, ids)
+        cv2.imshow('Mission Control Feed', frame)
 
         # Break the loop if the user presses 'q'
         if cv2.waitKey(1) & 0xFF == ord('q'):

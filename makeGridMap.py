@@ -5,23 +5,27 @@ from captureImage import captureImage
 from detectMarkers import detectMarkers
 
 def create_grid_map():
-
     # Set constants for real-world sizes
     aruco_marker_size = 10  # cm, side length of each ArUco marker
     grid_size = 5  # cm, side length of each square in the grid
 
     # Known dimensions of the map in cm
-    real_width = 100  # cm
-    real_height = 100  # cm
+    real_width = 75  # cm
+    real_height = 75  # cm
 
     # Capture an image from the camera and process it
-    capture_image = captureImage()
+    captured_image = captureImage()
 
-    # Convert the undistorted image to grayscale
-    gray = cv2.cvtColor(capture_image, cv2.COLOR_BGR2GRAY)
+    # Check if captured_image is None
+    if captured_image is None:
+        print("Failed to capture image.")
+        return None
+
+    # Convert the captured image to grayscale
+    gray = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
 
     # Apply thresholding to get a binary image for grid classification
-    _, binary = cv2.threshold(gray, 110, 255, cv2.THRESH_BINARY)  # Lower threshold value
+    _, binary = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)  # Lower threshold value
 
     # Create window
     cv2.namedWindow("Binary Feed", cv2.WINDOW_NORMAL)
@@ -59,40 +63,48 @@ def create_grid_map():
     center_positions = {}
     for corner, marker_id in zip(corners, ids.flatten()):
         if marker_id in required_markers + highground_markers:
+            if corner[0].size == 0:
+                print(f"Marker {marker_id} has no valid corners.")
+                return None
             # Use the mean of the corner points to get the center position of the marker
             center_positions[marker_id] = np.mean(corner[0], axis=0)
 
-    # Sort the centers by marker IDs (0,1,2,3) and define the map boundaries
-    top_left = center_positions[3]
-    top_right = center_positions[2]
-    bottom_left = center_positions[1]
-    bottom_right = center_positions[0]
+    # Check if all required markers have valid center positions
+    if not all(marker in center_positions for marker in required_markers):
+        print("Not all required markers have valid center positions.")
+        return None
 
-    # Calculate pixel distances between the markers
-    width_in_pixels = (np.linalg.norm(top_right - top_left) + np.linalg.norm(bottom_right - bottom_left)) / 2
-    height_in_pixels = (np.linalg.norm(top_left - bottom_left) + np.linalg.norm(top_right - bottom_right)) / 2
+    # Calculate pixels per cm in x and y directions using the known size of the ArUco markers
+    def calculate_pixels_per_cm(corner):
+        if len(corner[0]) < 2:
+            print("Not enough points to calculate pixels per cm.")
+            return None
+        # Calculate the distance between two adjacent corners of the same marker
+        side_length_in_pixels = np.linalg.norm(corner[0][0] - corner[0][1])
+        return side_length_in_pixels / aruco_marker_size
 
-    # Calculate the extremities of the ArUco markers
+    # Use one of the detected markers to calculate pixels per cm
+    pixels_per_cm_x = calculate_pixels_per_cm(corners[0])
+    pixels_per_cm_y = calculate_pixels_per_cm(corners[0])
+
+    if pixels_per_cm_x is None or pixels_per_cm_y is None:
+        print("Failed to calculate pixels per cm.")
+        return None
+
+    # Calculate half marker for extremities of the ArUco markers
     half_marker_size = aruco_marker_size / 2
 
-    # Calculate pixels per cm in x and y directions
-    pixels_per_cm_x = width_in_pixels / (real_width - aruco_marker_size)
-    pixels_per_cm_y = height_in_pixels / (real_height - aruco_marker_size)
-
     # Adjust the bounding box to include the extremities of the markers
-    min_x = int(min(top_left[0], top_right[0], bottom_left[0], bottom_right[0]) - half_marker_size * pixels_per_cm_x)
-    max_x = int(max(top_left[0], top_right[0], bottom_left[0], bottom_right[0]) + half_marker_size * pixels_per_cm_x)
-    min_y = int(min(top_left[1], top_right[1], bottom_left[1], bottom_right[1]) - half_marker_size * pixels_per_cm_y)
-    max_y = int(max(top_left[1], top_right[1], bottom_left[1], bottom_right[1]) + half_marker_size * pixels_per_cm_y)
+    min_x = int(np.min([corner[0][:, 0].min() for corner in corners]) - half_marker_size * pixels_per_cm_x)
+    max_x = int(np.max([corner[0][:, 0].max() for corner in corners]) + half_marker_size * pixels_per_cm_x)
+    min_y = int(np.min([corner[0][:, 1].min() for corner in corners]) - half_marker_size * pixels_per_cm_y)
+    max_y = int(np.max([corner[0][:, 1].max() for corner in corners]) + half_marker_size * pixels_per_cm_y)
 
     # Calculate the number of grid cells in the x and y directions based on the real-world size
     grid_cols = int(real_width / grid_size)
     grid_rows = int(real_height / grid_size)
 
-    print(f"min_x: {min_x}, max_x: {max_x}, min_y: {min_y}, max_y: {max_y}")
-    print(f"Grid dimensions: {grid_rows} rows x {grid_cols} columns")
-
-    # Create a map grid with dimensions based on real-world size
+    # Create a map grid 
     map_grid = np.zeros((grid_rows, grid_cols), dtype=np.uint8)
 
     # Function to classify a pixel area as "spice", "sand", or "aruco marker" based on the binary image
@@ -157,7 +169,7 @@ def create_grid_map():
 
     # Print the map grid (for debugging purposes)
     print("Generated map grid (2=spice, 1=highground, 3=aruco marker, 0=sand):")
-
+    print(map_grid)
 
     # Return the map grid
     return map_grid, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y
