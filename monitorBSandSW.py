@@ -62,6 +62,16 @@ def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixel
                     collected_spice.add((grid_y, grid_x))  # Mark spice cell as collected
                     print(f"Spice collected at grid position: ({grid_y}, {grid_x})")
 
+                # Calculate the orientation of the marker
+                # The orientation can be determined by the angle of the line connecting two corners
+                corner_0 = marker_corners[0][0]  # First corner
+                corner_1 = marker_corners[0][1]  # Second corner
+                dx = corner_1[0] - corner_0[0]
+                dy = corner_1[1] - corner_0[1]
+                angle = np.degrees(np.arctan2(dy, dx))
+
+                print(f"BabySpice's orientation: {angle:.2f} degrees")
+
             # Check if all spice is collected
             spice_cells = np.argwhere(map_grid == 2)
             all_spice_collected = all(tuple(cell) in collected_spice for cell in spice_cells)

@@ -13,6 +13,7 @@ Usage:
 
 # import the necessary libraries
 import time
+import cv2
 
 # import the necessary functions
 from makeGridMap import create_grid_map
@@ -45,11 +46,19 @@ def main():
         next_function(map_grid)
     else:
         print("Failed to create grid map.")
+        return
 
     # initialise collected_spice and camera_feed
     camera_feed = capture_Image()
     collected_spice = set() 
     
+    # Initialize the camera feed (use 0 for the default camera or provide a video file path)
+    camera_feed = cv2.VideoCapture(0)  # Change 0 to the path of your video file if needed
+
+    if not camera_feed.isOpened():
+        print("Failed to open camera or video file.")
+        return
+
     # Start monitoring sandworm presence and BabySpice's position
     monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y)
 
