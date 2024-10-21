@@ -7,8 +7,8 @@ import time
 
 def create_grid_map():
     # Set constants for real-world sizes
-    aruco_marker_size = 10  # cm, side length of each ArUco marker
-    grid_size = 10  # cm, side length of each square in the grid
+
+    grid_size = 5 # cm, side length of each square in the grid
 
 
     # Capture an image from the camera and process it
@@ -73,22 +73,25 @@ def create_grid_map():
     height = np.linalg.norm(marker_positions[3] - marker_positions[1]) / 10
     pixel_height = pixel_distance_between_markers(3, 1)
 
+    print("Width:", width)  # Debugging: Print the width of the bounding box
+    print("Height:", height)  # Debugging: Print the height of the bounding box
+
     pixels_per_cm_x = pixel_width / width
     pixels_per_cm_y = pixel_height / height
 
-    # Set the minimum and maximum x and y values as center of the markers
+    # calculate 5cm distance in pixels
+    five_cm_x = 5 * pixels_per_cm_x
+    five_cm_y = 5 * pixels_per_cm_y
+
+    # Set the minimum and maximum x and y values as center of the markers then subtract 5cm (half marker size)
     # min x is the minimum x value of markers 1 and 3
-    min_x = min(marker_positions[1][0], marker_positions[3][0])
-    # max x is the maximum x value of markers 0 and 2
-    max_x = max(marker_positions[0][0], marker_positions[2][0])
+    min_x = min(marker_positions[1][0], marker_positions[3][0]) - five_cm_x
     # min y is the minimum y value of markers 0 and 1
-    min_y = min(marker_positions[0][1], marker_positions[1][1])
-    # max y is the maximum y value of markers 2 and 3
-    max_y = max(marker_positions[2][1], marker_positions[3][1])
+    min_y = min(marker_positions[0][1], marker_positions[1][1]) - five_cm_y
     
     # Adjust the number of grid columns and rows dynamically based on the bounding box
-    grid_cols = int((pixel_width) / (grid_size * pixels_per_cm_x)) + 6
-    grid_rows = int((pixel_height) / (grid_size * pixels_per_cm_y)) + 3
+    grid_cols = int((pixel_width) / (grid_size * pixels_per_cm_x)) + 10
+    grid_rows = int((pixel_height) / (grid_size * pixels_per_cm_y)) + 10
 
     print("Grid columns:", grid_cols)  # Debugging: Print the number of grid columns
     print("Grid rows:", grid_rows)      # Debugging: Print the number of grid rows
