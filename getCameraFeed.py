@@ -13,7 +13,7 @@ def getCameraFeed():
     # Check if the camera feed is available
     if not cap.isOpened():
         print("Failed to open camera, attempting to use video file instead.")
-        video_path = os.path.join('videos', 'driveTest_3.mp4')
+        video_path = os.path.join('videos', 'driveTest_1.mp4')
         print(f"Trying to open video file at: {video_path}")
         
         # Check if the file exists
