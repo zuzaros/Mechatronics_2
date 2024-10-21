@@ -19,5 +19,6 @@ def detectMarkers(binary):
     if ids is not None:
         for ind, id in enumerate(ids):
             out = cv2.drawFrameAxes(binary, CM, dist_coef,rvecs[ind], tvecs[ind], 30)
+   
             
-    return corners, ids
+    return corners, ids, tvecs

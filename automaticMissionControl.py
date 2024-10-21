@@ -21,7 +21,7 @@ from captureImage import captureImage
 from planPath import plan_path
 from monitorBSandSW import monitor_sandworm_and_babyspice
 
-def main():
+def automaticMissionControl():
     print("Running automatic mission control...")
     print("Starting mission in 3...")
     time.sleep(1)
@@ -64,4 +64,4 @@ def main():
 
 if __name__ == "__main__":
     # This code will only run if this file is executed directly
-    main()
+    automaticMissionControl()
