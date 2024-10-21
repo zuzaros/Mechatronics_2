@@ -26,7 +26,7 @@ def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixel
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # Detect markers and their poses using the existing detectMarkers function
-        corners, ids = detectMarkers(gray)
+        corners, ids, tvecs = detectMarkers(gray)
 
         # Perform checks and operations only if the interval has passed
         if current_time - last_checked_time >= check_interval:
