@@ -12,10 +12,10 @@ import queue
 # Import functions
 from getCameraFeed import getCameraFeed
 from detectMarkers import detectMarkers
-from identifyHighground import identifyHighground
-from identifySpiceSand import identifySpiceSand
-from objectTracking import objectTracking
-from createMap import createMap
+from x_identifyHighground import identifyHighground
+from x_identifySpiceSand import identifySpiceSand
+from x_objectTracking import objectTracking
+from x_createMap import createMap
 from overlayMap import overlayMap
 
 def process_frame(ret, frame):

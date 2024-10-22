@@ -5,8 +5,8 @@ import cv2.aruco as aruco
 
 # Import the necessary functions
 from detectMarkers import detectMarkers
-from moveToHighground import move_to_highground
-from followPath import follow_path
+from x_moveToHighground import move_to_highground
+from x_followPath import follow_path
 
 def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y):
     last_checked_time = 0  # Initialize last check time
@@ -26,7 +26,7 @@ def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixel
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # Detect markers and their poses using the existing detectMarkers function
-        corners, ids = detectMarkers(gray)
+        corners, ids, tvecs = detectMarkers(gray)
 
         # Perform checks and operations only if the interval has passed
         if current_time - last_checked_time >= check_interval:
