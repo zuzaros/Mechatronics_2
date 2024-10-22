@@ -7,7 +7,7 @@ from A_Star import A_Star, direction
 
 def plan_path(map_grid):
 
-    print("Calculate the path of BabySpice to collect all the spice and return to the starting point.")
+    print("Calculating the path of BabySpice to collect all the spice and return to the starting point.")
 
     grid=map_grid
 

@@ -20,16 +20,17 @@ import cv2.aruco as aruco
 
 # import the necessary functions
 from makeGridMap import create_grid_map
-from planPath import plan_path
 from A_Star import A_Star, direction
 from CreateRobotCommands import CreateRobotCommands
 from MQTTread import MQTTread
 from MQTTwrite import MQTTwrite 
 from detectMarkers import detectMarkers
+from FindTargets import FindTargets
 
 # initialise variables
 last_checked_time = 0  # Initialize last check time
 check_interval = 3  # 3 seconds between checks
+
 
 
 def automaticMissionControl():
@@ -47,21 +48,51 @@ def automaticMissionControl():
 
     print(map_grid)
 
-    if map_grid is not None:
-        # Pass the map and parameters to the next function
-        plan_path(map_grid)
-    else:
-        print("Failed to create grid map.")
-        return
-    
-    # get path and high ground from plan_path
-    path, HG_targets = plan_path(map_grid)
-    
+    grid=map_grid
+
+    #find best order to hit spice_targets
+    start = (0,0)
+    spice_targets = FindTargets(grid, 2)
+    HG_targets = FindTargets(grid, 1)
+
+    permutations = []
+    length = [[] for _ in range(len(spice_targets) * (len(spice_targets) - 1) * (len(spice_targets) - 2))]
+    total_length = []
+    # Initialize event_grid
+    event_grid = np.zeros((len(map_grid), len(map_grid[0])))
+
+    # Generate permutations of spice targets
+    for i in range(len(spice_targets)):
+        for j in range(len(spice_targets)):
+            if j != i:
+                for k in range(len(spice_targets)):
+                    if k != i and k != j:
+                        permutations.append((start, spice_targets[i], spice_targets[j], spice_targets[k], start))
+
+    # Calculate path lengths for each permutation
+    for a in range(len(permutations)):
+        for b in range(len(permutations[a]) - 1):
+            length[a].append(len(A_Star(permutations[a][b], permutations[a][b + 1], map_grid)))
+        total_length.append(sum(length[a]))
+
+    # Choose the permutation with the shortest total length
+    chosen_permutation = permutations[total_length.index(min(total_length))]
+
+    print(chosen_permutation)
+
+    # Find and store path for all spice_targets combined
+    path = []
+
+    for i in range(len(chosen_permutation) - 1):
+        path.append(A_Star(chosen_permutation[i], chosen_permutation[i + 1], grid))
+
+    for i in range(len(path)):
+        j = 1
+
     # Initialize the camera feed and other variables
     camera_feed = cv2.VideoCapture(0)  # Change 0 to the path of your video file if needed
     i = 0
     j = 0
-    event_grid = np.zeros(len(map_grid), len(map_grid[0]))
     worm_trigger = 0 #default
     worm_trigger_counter = 0 #default
 
@@ -83,7 +114,6 @@ def automaticMissionControl():
 
     #reset variables
     current_target = path[i][j+1]
-
 
     while i <= len(path):
         while j < len(path[i]):
