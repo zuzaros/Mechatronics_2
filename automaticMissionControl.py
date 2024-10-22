@@ -48,10 +48,77 @@ def automaticMissionControl():
     
     print(map_grid)
 
+    time.sleep(1)
+    print("Calculating the path")
+    time.sleep(1)
+    # initialise camera feed
+    camera_feed = cv2.VideoCapture(0)  # Change 0 to the path of your video file if needed
+    # check if baby spice is in frame
+    while True:
+        ret, frame = camera_feed.read()
+        if not ret:
+            print("Failed to capture frame.")
+            break
+
+        # Convert the frame to grayscale for ArUco detection
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Detect markers and their poses using the existing detectMarkers function
+        corners, ids, tvecs = detectMarkers(gray)
+
+        # Display the frame with detected markers and IDs
+        if ids is not None:
+            aruco.drawDetectedMarkers(frame, corners, ids)
+        cv2.imshow('Mission Control Feed', frame)
+
+        # Check if BabySpice is detected
+        if ids is not None and 4 in ids.flatten():
+            print("BabySpice detected!")
+            #calculate the position of BabySpice
+            marker_index = np.where(ids == 4)[0][0]
+            marker_corners = corners[marker_index]
+
+            # Calculate the center of the detected marker
+            marker_center = np.mean(marker_corners[0], axis=0)
+            marker_x, marker_y = int(marker_center[0]), int(marker_center[1])
+
+            # Convert pixel position to grid coordinates
+            grid_x = int((marker_x - min_x) / (pixels_per_cm_x * 5))  # grid_size is 5 cm
+            grid_y = int((marker_y - min_y) / (pixels_per_cm_y * 5))
+
+            # Update the current position of the robot
+            current_pos = [grid_x, grid_y]
+
+            # Calculate the orientation of the marker
+            # The orientation can be determined by the angle of the line connecting two corners
+            corner_0 = marker_corners[0][0]  # First corner
+            corner_1 = marker_corners[0][1]  # Second corner
+            dx = corner_1[0] - corner_0[0]
+            dy = corner_1[1] - corner_0[1]
+            angle = np.degrees(np.arctan2(dy, dx))
+            # current orientation of the robot
+            # round the angle to the nearest multiple of 10 degrees
+            current_dir = round(angle / 10) * 10
+
+            #if orientation is not 0, print error message
+            if current_dir != 0:
+                print("Error: BabySpice is not facing the correct direction.")
+            else:
+                print("BabySpice is ready to start the mission!")
+
+        else:
+                print("BabySpice not detected - please put her in frame!")
+        break
+
+    time.sleep(5)
+
+    print("Calculating the path of BabySpice to collect all the spice and return to the starting point.")
+
+    # change name
     grid=map_grid
 
     #find best order to hit spice_targets
-    start = (0,0)
+    start = current_pos
     spice_targets = FindTargets(grid, 2)
     HG_targets = FindTargets(grid, 1)
 
@@ -137,7 +204,7 @@ def automaticMissionControl():
                     # Detect markers and their poses using the existing detectMarkers function
                     corners, ids, tvecs = detectMarkers(gray)
 
-                    # Display the frame with detected markers and grid lines
+                    # Display the frame with detected markers and IDs
                     if ids is not None:
                         aruco.drawDetectedMarkers(frame, corners, ids)
                     cv2.imshow('Mission Control Feed', frame)
@@ -170,8 +237,9 @@ def automaticMissionControl():
                         dy = corner_1[1] - corner_0[1]
                         angle = np.degrees(np.arctan2(dy, dx))
                         # current orientation of the robot
-                        current_dir = angle
-
+                        # round the angle to the nearest multiple of 90 degrees
+                        current_dir = round(angle / 90) * 90
+                        
                     else:
                         print("BabySpice not detected - please put her in frame!")
 
