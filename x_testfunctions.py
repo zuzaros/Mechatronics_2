@@ -1,6 +1,6 @@
 import cv2
 import time
-from mainLoop import process_frame
+from x_mainLoop import process_frame
 
 # Read the JPG image
 image_path = 'sample.jpg'
