@@ -142,6 +142,8 @@ def create_grid_map():
     cv2.destroyAllWindows()
 
     # Print the map grid (for debugging purposes)
+    # Set print options to expand the entire array
+    np.set_printoptions(threshold=np.inf)
     print("Generated map grid (2=spice, 1=highground, 3=aruco marker, 0=sand):")
     print(map_grid)
 
