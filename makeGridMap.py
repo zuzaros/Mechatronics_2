@@ -23,7 +23,7 @@ def create_grid_map():
     gray = cv2.cvtColor(sharpened_frame, cv2.COLOR_BGR2GRAY)
 
     # Apply thresholding to get a binary image for grid classification
-    _, binary = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)  # Lower threshold value
+    _, binary = cv2.threshold(gray, 70, 255, cv2.THRESH_BINARY)  # Lower threshold value
 
     # Create window
     cv2.namedWindow("Binary Feed", cv2.WINDOW_NORMAL)

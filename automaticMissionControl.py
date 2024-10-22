@@ -49,12 +49,19 @@ def automaticMissionControl():
     print(map_grid)
 
     time.sleep(1)
-    print("Calculating the path")
-    time.sleep(1)
-    # initialise camera feed
+
+      
+    # Initialize the camera feed
     camera_feed = cv2.VideoCapture(0)  # Change 0 to the path of your video file if needed
-    # check if baby spice is in frame
-    while True:
+
+    if not camera_feed.isOpened():
+        print("Failed to open camera or video file.")
+        return
+
+    babyspice_detected = False
+    correct_orientation = False
+
+    while not babyspice_detected or not correct_orientation:
         ret, frame = camera_feed.read()
         if not ret:
             print("Failed to capture frame.")
@@ -74,7 +81,9 @@ def automaticMissionControl():
         # Check if BabySpice is detected
         if ids is not None and 4 in ids.flatten():
             print("BabySpice detected!")
-            #calculate the position of BabySpice
+            babyspice_detected = True
+
+            # Calculate the position of BabySpice
             marker_index = np.where(ids == 4)[0][0]
             marker_corners = corners[marker_index]
 
@@ -96,23 +105,38 @@ def automaticMissionControl():
             dx = corner_1[0] - corner_0[0]
             dy = corner_1[1] - corner_0[1]
             angle = np.degrees(np.arctan2(dy, dx))
-            # current orientation of the robot
-            # round the angle to the nearest multiple of 10 degrees
-            current_dir = round(angle / 10) * 10
+            # Current orientation of the robot
+            # Round the angle to the nearest multiple of 10 degrees
+            current_dir = round(angle / 5) * 5
 
-            #if orientation is not 0, print error message
+            # Check if orientation is correct
             if current_dir != 0:
                 print("Error: BabySpice is not facing the correct direction.")
+                correct_orientation = False
             else:
                 print("BabySpice is ready to start the mission!")
+                print("Starting position:", current_pos)
+                correct_orientation = True
 
         else:
-                print("BabySpice not detected - please put her in frame!")
-        break
+            print("BabySpice not detected - please put her in frame!")
+            babyspice_detected = False
+            correct_orientation = False
+
+        # Display the frame
+        cv2.imshow('Mission Control Feed', frame)
+
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
     time.sleep(5)
 
     print("Calculating the path of BabySpice to collect all the spice and return to the starting point.")
+
+    # Release camera feed and close all OpenCV windows
+    camera_feed.release()
+    cv2.destroyAllWindows()
 
     # change name
     grid=map_grid
@@ -237,8 +261,11 @@ def automaticMissionControl():
                         dy = corner_1[1] - corner_0[1]
                         angle = np.degrees(np.arctan2(dy, dx))
                         # current orientation of the robot
-                        # round the angle to the nearest multiple of 90 degrees
+                        # round the angle to the nearest multiple of 90 degrees 
                         current_dir = round(angle / 90) * 90
+                        # if output is 360, set it to 0
+                        if current_dir == 360:
+                            current_dir = 0
                         
                     else:
                         print("BabySpice not detected - please put her in frame!")
@@ -321,5 +348,5 @@ def automaticMissionControl():
 
 
 if __name__ == "__main__":
-    # This code will only run if this file is executed directly
-    automaticMissionControl()
+     # This code will only run if this file is executed directly
+     automaticMissionControl()
