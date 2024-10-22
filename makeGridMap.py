@@ -96,7 +96,7 @@ def create_grid_map():
     print("Grid columns:", grid_cols)  # Debugging: Print the number of grid columns
     print("Grid rows:", grid_rows)      # Debugging: Print the number of grid rows
     
-    map_grid = np.zeros((grid_rows, grid_cols), dtype=np.uint8)
+    initial_grid = np.zeros((grid_rows, grid_cols), dtype=np.uint8)
 
     def classify_pixel_area(binary_image, x, y, cell_size, aruco_corners, highground_markers):
         if x < 0 or y < 0 or x + cell_size > binary_image.shape[1] or y + cell_size > binary_image.shape[0]:
@@ -120,14 +120,14 @@ def create_grid_map():
         for col in range(grid_cols):
             x = int((col * grid_size * pixels_per_cm_x))
             y = int((row * grid_size * pixels_per_cm_y))
-            map_grid[row, col] = classify_pixel_area(binary, x, y, int(grid_size * pixels_per_cm_x), aruco_corners, highground_markers)
+            initial_grid[row, col] = classify_pixel_area(binary, x, y, int(grid_size * pixels_per_cm_x), aruco_corners, highground_markers)
 
     # Display the generated map (for visualization, using 255 for spice, 128 for highground, 64 for aruco marker, and 0 for sand)
     map_image = np.zeros((grid_rows, grid_cols), dtype=np.uint8)
-    map_image[map_grid == 2] = 255  # Spice
-    map_image[map_grid == 1] = 128  # Highground
-    map_image[map_grid == 3] = 64   # ArUco marker
-    map_image[map_grid == 0] = 0    # Sand
+    map_image[initial_grid == 2] = 255  # Spice
+    map_image[initial_grid == 1] = 128  # Highground
+    map_image[initial_grid == 3] = 64   # ArUco marker
+    map_image[initial_grid == 0] = 0    # Sand
 
     # Resize for better visualization
     scaling_factor = 20  # Increase the scaling factor for better visualization
@@ -145,6 +145,12 @@ def create_grid_map():
     # Set print options to expand the entire array
     np.set_printoptions(threshold=np.inf)
     print("Generated map grid (2=spice, 1=highground, 3=aruco marker, 0=sand):")
+
+    #Marina's code needs commas between numbers
+    #map_grid=np.array2string(initial_grid, separator=', ')
+    #otherwise:
+    map_grid = initial_grid
+    
     print(map_grid)
 
     # Return the map grid
