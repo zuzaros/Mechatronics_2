@@ -1,12 +1,12 @@
-import heapq
-
-#heuristic function using manhattan distance
-def heuristic(a, b):
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
 #A* algorithm
 def A_Star(start, end, grid):
     
+    import heapq
+
+    #heuristic function using manhattan distance
+    def heuristic(a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
     #initialize the open and closed lists
     OpenList = []
     ClosedList = []
@@ -41,7 +41,7 @@ def A_Star(start, end, grid):
                 #change this part to my own code
             
                 #checks neighbor is within the grid and is not an obstacle
-                #assumes non-obstacles are 0 and obstacles are 1 in grid
+                #assumes non-obstacles are 0, 2 and 3 and obstacles are 1 in grid
                 if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]) and grid[neighbor[0]][neighbor[1]] != 1:
                     #calculate tentative g
                     tentative_g = g[current] + 1
@@ -57,7 +57,24 @@ def A_Star(start, end, grid):
     else:
         return 'No path found'
 
+
+def direction(a, b): #a is the first coordinate, b is the second coordinate
+    if a[0] == b[0]:
+        if a[1] < b[1]:
+            return 0 #right
+        else:
+            return 180 #left
+    else:
+        if a[0] < b[0]:
+            return 90 #up
+        else:
+            return 270 #down
+
+'''
 #test
+
+import heapq
+
 start = (0, 0)
 #end = (4, 0)
 grid = [[0, 0, 0, 0, 0],
@@ -97,18 +114,6 @@ for i in range(len(chosen_permutation)-1):
 print(path)
 
 #only keep important points (start, targets and turning points)
-def direction(a, b): #a is the first coordinate, b is the second coordinate
-    if a[0] == b[0]:
-        if a[1] < b[1]:
-            return 0 #right
-        else:
-            return 180 #left
-    else:
-        if a[0] < b[0]:
-            return 90 #up
-        else:
-            return 270 #down
-
 for i in range(len(path)):
     j = 1
     while j < len(path[i])-1:
@@ -119,4 +124,4 @@ for i in range(len(path)):
 
 print(path)
 
-
+'''

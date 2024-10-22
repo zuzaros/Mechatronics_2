@@ -20,11 +20,8 @@ import cv2.aruco as aruco
 
 # import the necessary functions
 from makeGridMap import create_grid_map
-from captureImage import captureImage
 from planPath import plan_path
-from monitorBSandSW import monitor_sandworm_and_babyspice
-from planPath import plan_path
-from A_Star import A_Star
+from A_Star import A_Star, direction
 from CreateRobotCommands import CreateRobotCommands
 from MQTTread import MQTTread
 from MQTTwrite import MQTTwrite 
@@ -58,34 +55,13 @@ def automaticMissionControl():
         return
     
     # get path and high ground from plan_path
-    path, high_ground = plan_path(map_grid)
-    
-    #only keep important points (start, targets and turning points)
-    def direction(a, b): #a is the first coordinate, b is the second coordinate
-        if a[0] == b[0]:
-            if a[1] < b[1]:
-                return 0 #right
-            else:
-                return 180 #left
-        else:
-            if a[0] < b[0]:
-                return 90 #up
-            else:
-                return 270 #down
-
-    for i in range(len(path)):
-        j = 1
-        while j < len(path[i])-1:
-            if direction(path[i][j-1], path[i][j]) == direction(path[i][j], path[i][j+1]):
-                path[i].remove(path[i][j])
-            else:
-                j += 1
+    path, HG_targets = plan_path(map_grid)
     
     # Initialize the camera feed and other variables
     camera_feed = cv2.VideoCapture(0)  # Change 0 to the path of your video file if needed
     i = 0
     j = 0
-    event_grid = np.zeros(len(grid), len(grid[0]))
+    event_grid = np.zeros(len(map_grid), len(map_grid[0]))
     worm_trigger = 0 #default
     worm_trigger_counter = 0 #default
 
@@ -195,9 +171,9 @@ def automaticMissionControl():
                             print ("Worm detected, redirecting to high ground")
                             #find closest high ground
                             distance_to_HG = []
-                            for k in range(len(high_ground)):
-                                distance_to_HG.append(len(A_Star(current_pos, high_ground[k], event_grid)))
-                            chosen_HG = high_ground[distance_to_HG.index(min(distance_to_HG))]
+                            for k in range(len(HG_targets)):
+                                distance_to_HG.append(len(A_Star(current_pos, HG_targets[k], event_grid)))
+                            chosen_HG = HG_targets[distance_to_HG.index(min(distance_to_HG))]
                             #find path to HG and back to position before worm trigger
                             event_path = A_Star(current_pos, chosen_HG, event_grid)
                             a = 1
