@@ -9,19 +9,18 @@ import time # This is the library that will allow us to use the sleep function
 import pygame
 import sys
 
-# define the runMission function
-def manualMissionControl():
-    print("Running manual mission control...")
-    print("Starting mission in 3...")
-    time.sleep(1)
-    print("2...")
-    time.sleep(1)
-    print("1...")
-    time.sleep(1)
-    print("Manual Mission started!")
+print("Running manual mission control...")
+print("Starting mission in 3...")
+time.sleep(1)
+print("2...")
+time.sleep(1)
+print("1...")
+time.sleep(1)
+print("Manual Mission started!")
+
 
 # function from Sophie's code
-
+# This function writes the value to MQTT of the state of the key
 
 
 class KeyTypeError(Exception):
@@ -181,8 +180,3 @@ while(1):
 
     except (KeyTypeError):
         continue
-
-# run
-if __name__ == "__main__":
-    # This code will only run if this file is executed directly
-    manualMissionControl()
