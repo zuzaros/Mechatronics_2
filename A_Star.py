@@ -42,7 +42,7 @@ def A_Star(start, end, grid):
             
                 #checks neighbor is within the grid and is not an obstacle
                 #assumes non-obstacles are 0 and obstacles are 1 in grid
-                if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]) and grid[neighbor[0]][neighbor[1]] == 0:
+                if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]) and grid[neighbor[0]][neighbor[1]] != 1:
                     #calculate tentative g
                     tentative_g = g[current] + 1
 
