@@ -10,18 +10,19 @@ def CreateRobotCommands(CurrentPos, CurrentDir, TargetPos):
     RPM = 30 # default for straight move
     WHEEL_RADIUS = 5 # in mm
     TIME = 5 # in seconds, default for turns
+    SQUARE_SIZE = 50 # in mm
 
     # Determine TargetDir and Distance
     Ydist = TargetPos[0] - CurrentPos[0]
     Xdist = TargetPos[1] - CurrentPos[1]
     if Ydist == 0:
-        Distance = abs(Xdist)
+        Distance = abs(Xdist)*SQUARE_SIZE
         if Xdist > 0:
             TargetDir = 0
         else:
             TargetDir = 180
     else:
-        Distance = abs(Ydist)
+        Distance = abs(Ydist)*SQUARE_SIZE
         if Ydist > 0:
             TargetDir = 90
         else:

@@ -27,11 +27,6 @@ from MQTTwrite import MQTTwrite
 from detectMarkers import detectMarkers
 from FindTargets import FindTargets
 
-# initialise variables
-last_checked_time = 0  # Initialize last check time
-check_interval = 3  # 3 seconds between checks
-
-
 
 def automaticMissionControl():
     print("Running automatic mission control...")
@@ -46,6 +41,11 @@ def automaticMissionControl():
     # Create the grid map
     map_grid, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y = create_grid_map()
 
+    # check if the grid map was created successfully
+    if map_grid is None:
+        print("Failed to create the grid map.")
+        return
+    
     print(map_grid)
 
     grid=map_grid
@@ -95,6 +95,8 @@ def automaticMissionControl():
     j = 0
     worm_trigger = 0 #default
     worm_trigger_counter = 0 #default
+    last_checked_time = 0  # Initialize last check time
+    check_interval = 5  # 3 seconds between checks
 
     if not camera_feed.isOpened():
         print("Failed to open camera or video file.")
@@ -153,13 +155,11 @@ def automaticMissionControl():
                         marker_center = np.mean(marker_corners[0], axis=0)
                         marker_x, marker_y = int(marker_center[0]), int(marker_center[1])
 
-                        print(f"BabySpice's position: (X: {marker_x}, Y: {marker_y})")
-
                         # Convert pixel position to grid coordinates
                         grid_x = int((marker_x - min_x) / (pixels_per_cm_x * 5))  # grid_size is 5 cm
                         grid_y = int((marker_y - min_y) / (pixels_per_cm_y * 5))
 
-                        print(f"BabySpice's grid position: (Row: {grid_y}, Col: {grid_x})")
+                        # Update the current position of the robot
                         current_pos = [grid_x, grid_y]
 
                         # Calculate the orientation of the marker
@@ -169,11 +169,11 @@ def automaticMissionControl():
                         dx = corner_1[0] - corner_0[0]
                         dy = corner_1[1] - corner_0[1]
                         angle = np.degrees(np.arctan2(dy, dx))
-
-                        print(f"BabySpice's orientation: {angle:.2f} degrees")
+                        # current orientation of the robot
                         current_dir = angle
+
                     else:
-                        print("BabySpice not detected.")
+                        print("BabySpice not detected - please put her in frame!")
 
                         # Check if the sandworm (marker 5) is in frame
                         sandworm_present = False
@@ -182,6 +182,7 @@ def automaticMissionControl():
 
                         if sandworm_present:
                             worm_trigger = 1
+                            print ("Worm detected, redirecting to high ground")
                         else:
                             worm_trigger = 0
 
@@ -198,7 +199,7 @@ def automaticMissionControl():
 
                         #check if it is the first time the worm trigger has been on
                         if  worm_trigger_counter == 1:
-                            print ("Worm detected, redirecting to high ground")
+                            
                             #find closest high ground
                             distance_to_HG = []
                             for k in range(len(HG_targets)):
@@ -237,7 +238,11 @@ def automaticMissionControl():
         #move on to next target set
         i += 1
         j = 0
-                
+
+        # if q is pressed, exit the loop
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+                    
         
     print("All spice collected and returned to start")
 
