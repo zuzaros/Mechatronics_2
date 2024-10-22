@@ -106,7 +106,6 @@ def automaticMissionControl():
     corners, ids, tvecs = detectMarkers(gray)
 
     #reset variables
-    #start_pos = path[i][j]
     current_target = path[i][j+1]
 
 
