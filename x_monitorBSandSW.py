@@ -7,6 +7,8 @@ import cv2.aruco as aruco
 from detectMarkers import detectMarkers
 from x_moveToHighground import move_to_highground
 from x_followPath import follow_path
+from makeGridMap import create_grid_map
+
 
 def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y):
     last_checked_time = 0  # Initialize last check time
@@ -96,3 +98,6 @@ def monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixel
     # Release camera feed and close all OpenCV windows
     camera_feed.release()
     cv2.destroyAllWindows()
+
+# run the function
+monitor_sandworm_and_babyspice(camera_feed, map_grid, collected_spice, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y)

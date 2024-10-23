@@ -54,14 +54,13 @@ def create_grid_map():
         print("Not all required corner markers found.")
         return None
 
-# Create a dictionary to hold marker positions and corners
+    # Create a dictionary to hold marker positions and corners
     marker_positions = {}
     aruco_corners = {}
 
     for i, marker_id in enumerate(ids.flatten()):
         marker_positions[marker_id] = tvecs[i][0]  # Translation vector
         aruco_corners[marker_id] = corners[i][0]   # Corners of the marker
-
     # Calculate pixel distances and pixels per cm
     def pixel_distance_between_markers(marker_a, marker_b):
         corner_a = aruco_corners[marker_a]
@@ -88,6 +87,10 @@ def create_grid_map():
     min_x = min(marker_positions[1][0], marker_positions[3][0]) - five_cm_x
     # min y is the minimum y value of markers 0 and 1
     min_y = min(marker_positions[0][1], marker_positions[1][1]) - five_cm_y
+
+    # print values for debugging
+    print(f"min_x: {min_x}, min_y: {min_y}")
+    print(f"pixels_per_cm_x: {pixels_per_cm_x}, pixels_per_cm_y: {pixels_per_cm_y}")
     
     # Adjust the number of grid columns and rows dynamically based on the bounding box
     grid_cols = int((pixel_width) / (grid_size * pixels_per_cm_x)) + 10
@@ -152,9 +155,15 @@ def create_grid_map():
     map_grid = initial_grid
     
     print(map_grid)
+    
+    #calculated grid size in cm
+    grid_size_width = width / (grid_cols-10)
+    grid_size_height = height / (grid_rows-10)
+
+    print("calculated grid size in cm:", grid_size_width, grid_size_height)
 
     # Return the map grid
-    return map_grid, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y
+    return map_grid, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y, grid_size_width, grid_size_height
 
 if __name__ == "__main__":
     create_grid_map()
