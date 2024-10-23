@@ -46,9 +46,28 @@ def automaticMissionControl():
         print("Failed to create the grid map.")
         return
     
+    print ("Grid map created successfully!")
     print(map_grid)
 
     time.sleep(1)
+
+    # expand highground area
+    expansion_size = 1
+    rows, cols = len(map_grid), len(map_grid[0])
+    grid = np.array(map_grid)  # Create a copy of the grid to avoid modifying the original
+
+    # Identify highground cells
+    highground_cells = [(i, j) for i in range(rows) for j in range(cols) if grid[i][j] == 1]
+
+    # Expand highground area
+    for i, j in highground_cells:
+        for di in range(-expansion_size, expansion_size + 1):
+            for dj in range(-expansion_size, expansion_size + 1):
+                ni, nj = i + di, j + dj
+                if 0 <= ni < rows and 0 <= nj < cols:
+                    grid[ni][nj] = 1
+    print ("Highground area expanded successfully!")
+    print (grid)
 
       
     # Initialize the camera feed
@@ -138,23 +157,6 @@ def automaticMissionControl():
     camera_feed.release()
     cv2.destroyAllWindows()
 
-    # expand highground area
-    expansion_size = 2
-    rows, cols = len(map_grid), len(map_grid[0])
-    grid = np.array(map_grid)  # Create a copy of the grid to avoid modifying the original
-
-    # Identify highground cells
-    highground_cells = [(i, j) for i in range(rows) for j in range(cols) if grid[i][j] == 1]
-
-    # Expand highground area
-    for i, j in highground_cells:
-        for di in range(-expansion_size, expansion_size + 1):
-            for dj in range(-expansion_size, expansion_size + 1):
-                ni, nj = i + di, j + dj
-                if 0 <= ni < rows and 0 <= nj < cols:
-                    grid[ni][nj] = 1
-
-    print (grid)
 
     #find best order to hit spice_targets
     start = current_pos
@@ -301,7 +303,9 @@ def automaticMissionControl():
                         break
 
                 #check if the target has been reached
-                if current_pos == current_target:
+                # current position can be within 1 cell of the target
+                # this is to account for any errors in the robot's movement
+                if current_pos[0] in range(current_target[0]-1, current_target[0]+2) and current_pos[1] in range(current_target[1]-1, current_target[1]+2):
 
                     #check if worm trigger is on
                     if worm_trigger == 1:
