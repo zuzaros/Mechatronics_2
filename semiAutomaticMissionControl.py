@@ -9,7 +9,7 @@ Usage:
     This script should be executed directly to run the automatic mission control.
 """
 # it will be responsible for the following:
-# running the automatic mission control
+# running the automatic mission controlq
 
 # import the necessary libraries
 import time
@@ -238,46 +238,74 @@ def semiAutomaticMissionControl():
     # reset variables
     current_target = path[i][j + 1]
 
+    print("The current target is:", current_target)
+
     while i <= len(path):
         while j < len(path[i]):
-            executing_value = int(MQTTread("Executing"))
-            if executing_value == 0:    
-                while True:
-                    current_time = time.time()
+            #executing value is the last message received from the robot in background. When received_messages is empty, the executing value is 0 so it can enter the loop
+            if len(received_messages) > 0:
+                executing_value = received_messages[-1]
+            else:
+                executing_value = 0
 
-                    # Capture the current frame from the camera feed
-                    ret, frame = camera_feed.read()
+            if executing_value == 0:  
+                time.sleep(5)
+            
+                #zuza loop to get babyspice_pos and babyspice_dir and worm_trigger
+                
+                #reset variables
+                current_target = path[i][j+1]
+                #ask user to input the current position of the robot
+                current_pos = input("Please input the current position of the robot: ")
+                current_pos = current_pos.split(",")
+                current_pos = [int(current_pos[0]), int(current_pos[1])]
+                #ask user to input the current direction of the robot
+                current_dir = input("Please input the current direction of the robot: ")
+                current_dir = int(current_dir)
+                
+                allowable_target_range = [
+                    (current_target[0] + dx, current_target[1] + dy)
+                    for dx in range(-1, 2)
+                    for dy in range(-1, 2)
+                    ]
 
-                    if not ret:
-                        print("Failed to capture frame.")
-                        break
+                #check if the target has been reached
+                if current_pos in allowable_target_range:  
+                    while True:
+                        current_time = time.time()
 
-                    # Convert the frame to grayscale for ArUco detection
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                        # Capture the current frame from the camera feed
+                        ret, frame = camera_feed.read()
 
-                    # Detect markers and their poses using the existing detectMarkers function
-                    corners, ids, tvecs = detectMarkers(gray)
+                        if not ret:
+                            print("Failed to capture frame.")
+                            break
 
-                    # Display the frame with detected markers and IDs
-                    if ids is not None:
-                        aruco.drawDetectedMarkers(frame, corners, ids)
-                    cv2.imshow('Mission Control Feed', frame)
+                        # Convert the frame to grayscale for ArUco detection
+                        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-                    # Perform checks and operations only if the interval has passed
-                    if current_time - last_checked_time >= check_interval:
-                        last_checked_time = current_time  # Update last check time
+                        # Detect markers and their poses using the existing detectMarkers function
+                        corners, ids, tvecs = detectMarkers(gray)
 
-                    # Check if any sandworms are detected
-                    if (time.time() - last_checked_time) >= check_interval:
-                        last_checked_time = time.time()
-                        if ids is not None and 2 in ids.flatten():
-                            worm_trigger = 1
-                            worm_trigger_counter = 0
-                        else:
-                            worm_trigger = 0
+                        # Display the frame with detected markers and IDs
+                        if ids is not None:
+                            aruco.drawDetectedMarkers(frame, corners, ids)
+                        cv2.imshow('Mission Control Feed', frame)
+
+                        # Perform checks and operations only if the interval has passed
+                        if current_time - last_checked_time >= check_interval:
+                            last_checked_time = current_time  # Update last check time
+
+                        # Check if any sandworms are detected
+                        if (time.time() - last_checked_time) >= check_interval:
+                            last_checked_time = time.time()
+                            if ids is not None and 2 in ids.flatten():
+                                worm_trigger = 1
+                            else:
+                                worm_trigger = 0
 
                         # Handle sandworm presence logic
-                       #check if worm trigger is on
+                        #check if worm trigger is on
                     if worm_trigger == 1:
                         worm_trigger_counter += 1
 
@@ -313,31 +341,26 @@ def semiAutomaticMissionControl():
                     worm_trigger_counter = 0
                     j += 1
 
-            #if the target has not been reached
+                #if the target has not been reached
+                else:
+                    MOTOR_DIRECTIONS, RPM, TIME = CreateRobotCommands(current_pos, current_dir, current_target)
+
+                    Time_Units = int(TIME)
+                    Time_Decimals = int(round((TIME - Time_Units) * 100))
+                    
+                    MQTTwrite("M1_Dir", MOTOR_DIRECTIONS[0])
+                    MQTTwrite("M2_Dir", MOTOR_DIRECTIONS[1])
+                    MQTTwrite("M1_RPM", RPM)
+                    MQTTwrite("M2_RPM", RPM)
+                    MQTTwrite("Time_Units", Time_Units)
+                    MQTTwrite("Time_Decimals", Time_Decimals)
+                    
+                    #give robot time to update executing value
+                    time.sleep(5)
+
             else:
-                #ask user to input the current position of the robot
-                current_pos = input("Please input the current position of the robot: ")
-                current_pos = current_pos.split(",")
-                current_pos = [int(current_pos[0]), int(current_pos[1])]
-
-                MOTOR_DIRECTIONS, RPM, TIME = CreateRobotCommands(current_pos, current_dir, current_target)
-
-                Time_Units = int(TIME)
-                Time_Decimals = int(round((TIME - Time_Units) * 100))
-                
-                MQTTwrite("M1_Dir", MOTOR_DIRECTIONS[0])
-                MQTTwrite("M2_Dir", MOTOR_DIRECTIONS[1])
-                MQTTwrite("M1_RPM", RPM)
-                MQTTwrite("M2_RPM", RPM)
-                MQTTwrite("Time_Units", Time_Units)
-                MQTTwrite("Time_Decimals", Time_Decimals)
-                
-                #give robot time to update executing value
+                print("Waiting for robot to finish executing order")
                 time.sleep(5)
-
-        else:
-            print("Waiting for robot to finish executing order")
-            time.sleep(5)
 
         print("Target reached, Collecting spice")
             
@@ -359,3 +382,6 @@ def semiAutomaticMissionControl():
 # Ensure the script runs the automatic mission control when executed
 if __name__ == "__main__":
     semiAutomaticMissionControl()
+
+
+exit()
