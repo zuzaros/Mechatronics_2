@@ -138,8 +138,23 @@ def automaticMissionControl():
     camera_feed.release()
     cv2.destroyAllWindows()
 
-    # change name
-    grid=map_grid
+    # expand highground area
+    expansion_size = 2
+    rows, cols = len(map_grid), len(map_grid[0])
+    grid = np.array(map_grid)  # Create a copy of the grid to avoid modifying the original
+
+    # Identify highground cells
+    highground_cells = [(i, j) for i in range(rows) for j in range(cols) if grid[i][j] == 1]
+
+    # Expand highground area
+    for i, j in highground_cells:
+        for di in range(-expansion_size, expansion_size + 1):
+            for dj in range(-expansion_size, expansion_size + 1):
+                ni, nj = i + di, j + dj
+                if 0 <= ni < rows and 0 <= nj < cols:
+                    grid[ni][nj] = 1
+
+    print (grid)
 
     #find best order to hit spice_targets
     start = current_pos
