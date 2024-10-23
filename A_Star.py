@@ -1,61 +1,61 @@
-#A* algorithm
+import heapq
+
+# A* algorithm
 def A_Star(start, end, grid):
     
     import heapq
 
-    #heuristic function using manhattan distance
+    # Convert start and end to tuples
+    start = tuple(start)
+    end = tuple(end)
+
+    # Heuristic function using Manhattan distance
     def heuristic(a, b):
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-    #initialize the open and closed lists
+    # Initialize the open and closed lists
     OpenList = []
     ClosedList = []
-    #create dictionaries to store the cost of the path, the heuristic cost and the total cost for each node
+    # Create dictionaries to store the cost of the path, the heuristic cost, and the total cost for each node
     parent = {}
-    g = {start: 0} #the cost of getting from the start node to that node
-    h = {start: heuristic(start, end)} #heuristic cost of getting from the node to the goal
-    f = {start: g[start] + h[start]} #the total cost of getting from the start node to the goal by passing by that node
+    g = {start: 0}  # The cost of getting from the start node to that node
+    h = {start: heuristic(start, end)}  # Heuristic cost of getting from the node to the goal
+    f = {start: g[start] + h[start]}  # The total cost of getting from the start node to the goal by passing by that node
 
-    #add the start node into the open list
+    # Add the start node into the open list
     heapq.heappush(OpenList, (f[start], start))
 
     while OpenList:
-        #set current node = node with smallest f in OpenList and pop from OpenList
+        # Set current node = node with smallest f in OpenList and pop from OpenList
         current = heapq.heappop(OpenList)[1]
         if current == end:
-            #reconstruct the path
+            # Reconstruct the path
             path = []
             while current in parent:
                 path.append(current)
                 current = parent[current]
-            path.append(start)
-            path.reverse()
+            path.append(start)  # Add the start node to the path
+            path.reverse()  # Reverse the path to get the correct order
             return path
-        else:
-            #add current to the ClosedList
-            ClosedList.append(current)
 
-            #Expand current by finding and exploring neighbors, can not move diagonally
-            for direction in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-                neighbor = (current[0] + direction[0], current[1] + direction[1])
-                #change this part to my own code
-            
-                #checks neighbor is within the grid and is not an obstacle
-                #assumes non-obstacles are 0, 2 and 3 and obstacles are 1 in grid
-                if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]) and grid[neighbor[0]][neighbor[1]] != 1:
-                    #calculate tentative g
-                    tentative_g = g[current] + 1
+        ClosedList.append(current)
 
-                    #if neighbor is in the ClosedList and tentative_g >= g[neighbor], skip
-                    #otherwise, update the parent, g, f and push into the OpenList
-                    if neighbor not in g or tentative_g < g[neighbor]:
-                        parent[neighbor] = current
-                        g[neighbor] = tentative_g
-                        h[neighbor] = heuristic(neighbor, end)
-                        f[neighbor] = g[neighbor] + h[neighbor]
-                        heapq.heappush(OpenList, (f[neighbor], neighbor))
-    else:
-        return 'No path found'
+        # Check all the neighbors of the current node
+        neighbors = [(current[0] + 1, current[1]), (current[0] - 1, current[1]), (current[0], current[1] + 1), (current[0], current[1] - 1)]
+        for neighbor in neighbors:
+            if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]) and grid[neighbor[0]][neighbor[1]] != 1:
+                tentative_g_score = g[current] + 1
+                if neighbor in ClosedList and tentative_g_score >= g.get(neighbor, float('inf')):
+                    continue
+
+                if tentative_g_score < g.get(neighbor, float('inf')) or neighbor not in [i[1] for i in OpenList]:
+                    parent[neighbor] = current
+                    g[neighbor] = tentative_g_score
+                    h[neighbor] = heuristic(neighbor, end)
+                    f[neighbor] = g[neighbor] + h[neighbor]
+                    heapq.heappush(OpenList, (f[neighbor], neighbor))
+
+    return []  # Return an empty path if there is no path from start to end
 
 
 def direction(a, b): #a is the first coordinate, b is the second coordinate

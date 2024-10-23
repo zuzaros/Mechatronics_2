@@ -76,7 +76,7 @@ def semiAutomaticMissionControl():
 
     babyspice_detected = False
     correct_orientation = False
-    current_pos = [0, 0]  # Set starting position to (0, 0)
+    current_pos = [3, 3]  # Set starting position to (0, 0)
 
     while not babyspice_detected or not correct_orientation:
         ret, frame = camera_feed.read()
@@ -96,8 +96,8 @@ def semiAutomaticMissionControl():
         cv2.imshow('Mission Control Feed', frame)
 
         # BabySpice detection logic
-        if ids is not None and 7 in ids.flatten():
-            marker_index = np.where(ids == 7)[0][0]
+        if ids is not None and 4 in ids.flatten():
+            marker_index = np.where(ids == 4)[0][0]
             marker_corners = corners[marker_index]
 
             # ask user to confirm if BabySpice is in the correct position
@@ -146,10 +146,10 @@ def semiAutomaticMissionControl():
     start = current_pos
     spice_targets = FindTargets(grid, 2)
     HG_targets = FindTargets(grid, 1)
-
     permutations = []
     length = [[] for _ in range(len(spice_targets) * (len(spice_targets) - 1) * (len(spice_targets) - 2))]
     total_length = []
+
     # Initialize event_grid
     event_grid = np.zeros((len(map_grid), len(map_grid[0])))
 
@@ -177,6 +177,38 @@ def semiAutomaticMissionControl():
 
     for i in range(len(chosen_permutation) - 1):
         path.append(A_Star(chosen_permutation[i], chosen_permutation[i + 1], grid))
+
+      #only keep important points (start, spice_targets and turning points)
+    for i in range(len(path)):
+        j = 1
+        while j < len(path[i])-1:
+            if direction(path[i][j-1], path[i][j]) == direction(path[i][j], path[i][j+1]):
+                path[i].remove(path[i][j])
+            else:
+                j += 1
+
+    print(path)  
+
+    ########## Connect to MQTT
+    import paho.mqtt.client as mqtt
+
+    def on_connect(client,userdata,flags,rc):
+        print ("Connected to MQTT")
+        client.subscribe("babyspice/Executing")
+
+    # The callback for when a PUBLISH message is received from the server.
+    def on_message(client, userdata, msg):
+        received_messages.append(int(msg.payload.decode()))
+
+    client = mqtt.Client()
+    received_messages = []
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.username_pw_set("student","HousekeepingGlintsStreetwise")
+    client.connect("fesv-mqtt.bath.ac.uk",31415,60)
+
+    client.loop_start()
 
     # Initialize the camera feed and other variables
     camera_feed = cv2.VideoCapture(0)  # Change 0 to the path of your video file if needed
@@ -229,6 +261,11 @@ def semiAutomaticMissionControl():
                     # Display the frame with detected markers and IDs
                     if ids is not None:
                         aruco.drawDetectedMarkers(frame, corners, ids)
+                    cv2.imshow('Mission Control Feed', frame)
+
+                    # Perform checks and operations only if the interval has passed
+                    if current_time - last_checked_time >= check_interval:
+                        last_checked_time = current_time  # Update last check time
 
                     # Check if any sandworms are detected
                     if (time.time() - last_checked_time) >= check_interval:
@@ -246,7 +283,13 @@ def semiAutomaticMissionControl():
 
                         #check if it is the first time the worm trigger has been on
                         if  worm_trigger_counter == 1:
-                            
+
+                            #ask user to input the current position of the robot
+                            current_pos = input("Please input the current position of the robot: ")
+                            current_pos = current_pos.split(",")
+                            current_pos = [int(current_pos[0]), int(current_pos[1])]
+
+
                             #find closest high ground
                             distance_to_HG = []
                             for k in range(len(HG_targets)):
@@ -270,36 +313,44 @@ def semiAutomaticMissionControl():
                     worm_trigger_counter = 0
                     j += 1
 
-                    # Display the frame
-                    cv2.imshow('Mission Control Feed', frame)
+            #if the target has not been reached
+            else:
+                #ask user to input the current position of the robot
+                current_pos = input("Please input the current position of the robot: ")
+                current_pos = current_pos.split(",")
+                current_pos = [int(current_pos[0]), int(current_pos[1])]
 
-                    # Move BabySpice to the current target
-                    if current_target is not None:
-                        # Send movement command to BabySpice using MQTT
-                        print(f"Moving to target {current_target}")
-                        MQTTwrite("RoboX_move", current_target)
-                        time.sleep(2)  # Wait for BabySpice to move
-                        # Check if target is reached
-                        user_input = input(f"Have you reached target {current_target}? (y/n): ")
-                        if user_input.lower() == 'y':
-                            print(f"Target {current_target} reached.")
-                            j += 1  # Move to the next target
-                            if j >= len(path[i]) - 1:
-                                j = 0  # Reset j if the end of the current path is reached
-                                i += 1  # Move to the next path
-                                if i >= len(path):
-                                    print("Mission completed!")
-                                    camera_feed.release()
-                                    cv2.destroyAllWindows()
-                                    return
-                            current_target = path[i][j + 1]
-                        else:
-                            print("Target not reached. Please try again.")
-                    else:
-                        print("No target available.")
+                MOTOR_DIRECTIONS, RPM, TIME = CreateRobotCommands(current_pos, current_dir, current_target)
 
-        # Move to the next target or reset for the next path
-        j += 1
+                Time_Units = int(TIME)
+                Time_Decimals = int(round((TIME - Time_Units) * 100))
+                
+                MQTTwrite("M1_Dir", MOTOR_DIRECTIONS[0])
+                MQTTwrite("M2_Dir", MOTOR_DIRECTIONS[1])
+                MQTTwrite("M1_RPM", RPM)
+                MQTTwrite("M2_RPM", RPM)
+                MQTTwrite("Time_Units", Time_Units)
+                MQTTwrite("Time_Decimals", Time_Decimals)
+                
+                #give robot time to update executing value
+                time.sleep(5)
+
+        else:
+            print("Waiting for robot to finish executing order")
+            time.sleep(5)
+
+        print("Target reached, Collecting spice")
+            
+        #action to be performed when collecting spice
+        time.sleep(10)
+
+        #move on to next target set
+        i += 1
+        j = 0
+                
+
+    print("All spice collected and returned to start")
+                  
 
     # Release camera feed and close all OpenCV windows
     camera_feed.release()
