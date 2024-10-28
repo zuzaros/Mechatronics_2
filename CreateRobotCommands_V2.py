@@ -10,8 +10,8 @@ def CreateRobotCommands(CurrentPos, CurrentDir, TargetPos):
     RPM = 40 # default for both straight and turn moves
     #GEAR_RATIO = 1 Because it's 1:1 it's not relevant
     WHEEL_RADIUS = 45 # in mm (outside)
-    TIME_CCW = 5.50 # in seconds, default for CCW turns
-    TIME_CW = 5.45 # in seconds, default for CW turns
+    TIME_CCW = 5.65 # in seconds, default for CCW turns
+    TIME_CW = 5.55 # in seconds, default for CW turns
     SQUARE_SIZE = 50 # in mm, for grid
 
 

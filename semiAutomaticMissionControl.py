@@ -22,7 +22,7 @@ from makeGridMap import create_grid_map
 from A_Star import A_Star, direction
 from CreateRobotCommands_V2 import CreateRobotCommands
 from MQTTread import MQTTread
-from MQTTwrite_V2 import MQTTwrite 
+from MQTTwrite import MQTTwrite 
 from detectMarkers import detectMarkers
 from FindTargets import FindTargets
 
@@ -76,7 +76,7 @@ def semiAutomaticMissionControl():
 
     babyspice_detected = False
     correct_orientation = False
-    current_pos = [3, 3]  # Set starting position to (0, 0)
+    current_pos = (3, 3)  # Set starting position to (0, 0)
 
     while not babyspice_detected or not correct_orientation:
         ret, frame = camera_feed.read()
@@ -111,7 +111,8 @@ def semiAutomaticMissionControl():
             dx = corner_1[0] - corner_0[0]
             dy = corner_1[1] - corner_0[1]
             angle = np.degrees(np.arctan2(dy, dx))
-            current_dir = round(angle / 5) * 5
+            current_dir = round(angle / 10) * 10
+            print("BabySpice orientation:", current_dir)
 
             # Check if orientation is correct
             if current_dir != 0:
@@ -258,7 +259,7 @@ def semiAutomaticMissionControl():
                 #ask user to input the current position of the robot
                 current_pos = input("Please input the current position of the robot: ")
                 current_pos = current_pos.split(",")
-                current_pos = [int(current_pos[0]), int(current_pos[1])]
+                current_pos = (int(current_pos[0]), int(current_pos[1]))
                 #ask user to input the current direction of the robot
                 current_dir = input("Please input the current direction of the robot: ")
                 current_dir = int(current_dir)
