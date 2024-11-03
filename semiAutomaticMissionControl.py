@@ -9,7 +9,7 @@ Usage:
     This script should be executed directly to run the automatic mission control.
 """
 # it will be responsible for the following:
-# running the automatic mission control
+# running the automatic mission controlq
 
 # import the necessary libraries
 import time
@@ -17,18 +17,16 @@ import cv2
 import numpy as np
 import cv2.aruco as aruco
 
-
 # import the necessary functions
 from makeGridMap import create_grid_map
 from A_Star import A_Star, direction
-from CreateRobotCommands import CreateRobotCommands
+from CreateRobotCommands_V2 import CreateRobotCommands
 from MQTTread import MQTTread
 from MQTTwrite import MQTTwrite 
 from detectMarkers import detectMarkers
 from FindTargets import FindTargets
 
-
-def automaticMissionControl():
+def semiAutomaticMissionControl():
     print("Running automatic mission control...")
     print("Starting mission in 3...")
     time.sleep(1)
@@ -36,6 +34,7 @@ def automaticMissionControl():
     time.sleep(1)
     print("1...")
     time.sleep(1)
+    print("Automatic is starting started!")
 
     # Create the grid map
     map_grid, pixels_per_cm_x, pixels_per_cm_y, min_x, min_y, grid_size_width, grid_size_height = create_grid_map()
@@ -77,6 +76,7 @@ def automaticMissionControl():
 
     babyspice_detected = False
     correct_orientation = False
+    current_pos = (3, 3)  # Set starting position to (0, 0)
 
     while not babyspice_detected or not correct_orientation:
         ret, frame = camera_feed.read()
@@ -93,51 +93,40 @@ def automaticMissionControl():
         # Display the frame with detected markers and IDs
         if ids is not None:
             aruco.drawDetectedMarkers(frame, corners, ids)
-            cv2.imshow('Mission Control Feed', frame)
+        cv2.imshow('Mission Control Feed', frame)
 
-            # BabySpice detection logic
-            if ids is not None and 7 in ids.flatten():
-                marker_index = np.where(ids == 7)[0][0]
-                marker_corners = corners[marker_index]
+        # BabySpice detection logic
+        if ids is not None and 4 in ids.flatten():
+            marker_index = np.where(ids == 4)[0][0]
+            marker_corners = corners[marker_index]
 
-                # Calculate the center of the detected marker
-                marker_center = np.mean(marker_corners[0], axis=0)
-                marker_x, marker_y = int(marker_center[0]), int(marker_center[1])
+            # ask user to confirm if BabySpice is in the correct position
+            user_input = input("Is BabySpice in the correct position? (y/n): ")
+            if user_input.lower() == 'y':
+                babyspice_detected = True
 
-                print(f"BabySpice's position: (X: {marker_x}, Y: {marker_y})")
+            # Calculate the orientation of the marker
+            corner_0 = marker_corners[0][0]  # First corner
+            corner_1 = marker_corners[0][1]  # Second corner
+            dx = corner_1[0] - corner_0[0]
+            dy = corner_1[1] - corner_0[1]
+            angle = np.degrees(np.arctan2(dy, dx))
+            current_dir = round(angle / 10) * 10
+            print("BabySpice orientation:", current_dir)
 
-                # Convert pixel position to grid coordinates
-                grid_x = int((marker_x - min_x) / (pixels_per_cm_x * 50))  # grid_size is 5 cm
-                grid_y = int((marker_y - min_y) / (pixels_per_cm_y * 50))
-
-                print(f"BabySpice's grid position: (Row: {grid_y}, Col: {grid_x})")
-
-                current_pos = [grid_x, grid_y]
-
-                # Calculate the orientation of the marker
-                # The orientation can be determined by the angle of the line connecting two corners
-                corner_0 = marker_corners[0][0]  # First corner
-                corner_1 = marker_corners[0][1]  # Second corner
-                dx = corner_1[0] - corner_0[0]
-                dy = corner_1[1] - corner_0[1]
-                angle = np.degrees(np.arctan2(dy, dx))
-                # Current orientation of the robot
-                # Round the angle to the nearest multiple of 10 degrees
-                current_dir = round(angle / 5) * 5
-
-                # Check if orientation is correct
-                if current_dir !=270:
-                    print("Error: BabySpice is not facing the correct direction.")
-                    correct_orientation = False
-                else:
-                    print("BabySpice is ready to start the mission!")
-                    print("Starting position:", current_pos)
-                    correct_orientation = True
-
-            else:
-                print("BabySpice not detected - please put her in frame!")
-                babyspice_detected = False
+            # Check if orientation is correct
+            if current_dir != 0:
+                print("Error: BabySpice is not facing the correct direction.")
                 correct_orientation = False
+            else:
+                print("BabySpice is ready to start the mission!")
+                print("Starting position:", current_pos)
+                correct_orientation = True
+
+        else:
+            print("BabySpice not detected - please put her in frame!")
+            babyspice_detected = False
+            correct_orientation = False
 
         # Display the frame
         cv2.imshow('Mission Control Feed', frame)
@@ -154,15 +143,14 @@ def automaticMissionControl():
     camera_feed.release()
     cv2.destroyAllWindows()
 
-
-    #find best order to hit spice_targets
+    # find best order to hit spice_targets
     start = current_pos
     spice_targets = FindTargets(grid, 2)
     HG_targets = FindTargets(grid, 1)
-
     permutations = []
     length = [[] for _ in range(len(spice_targets) * (len(spice_targets) - 1) * (len(spice_targets) - 2))]
     total_length = []
+
     # Initialize event_grid
     event_grid = np.zeros((len(map_grid), len(map_grid[0])))
 
@@ -191,15 +179,44 @@ def automaticMissionControl():
     for i in range(len(chosen_permutation) - 1):
         path.append(A_Star(chosen_permutation[i], chosen_permutation[i + 1], grid))
 
+      #only keep important points (start, spice_targets and turning points)
     for i in range(len(path)):
         j = 1
+        while j < len(path[i])-1:
+            if direction(path[i][j-1], path[i][j]) == direction(path[i][j], path[i][j+1]):
+                path[i].remove(path[i][j])
+            else:
+                j += 1
+
+    print(path)  
+
+    ########## Connect to MQTT
+    import paho.mqtt.client as mqtt
+
+    def on_connect(client,userdata,flags,rc):
+        print ("Connected to MQTT")
+        client.subscribe("babyspice/Executing")
+
+    # The callback for when a PUBLISH message is received from the server.
+    def on_message(client, userdata, msg):
+        received_messages.append(int(msg.payload.decode()))
+
+    client = mqtt.Client()
+    received_messages = []
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.username_pw_set("student","HousekeepingGlintsStreetwise")
+    client.connect("fesv-mqtt.bath.ac.uk",31415,60)
+
+    client.loop_start()
 
     # Initialize the camera feed and other variables
     camera_feed = cv2.VideoCapture(0)  # Change 0 to the path of your video file if needed
     i = 0
     j = 0
-    worm_trigger = 0 #default
-    worm_trigger_counter = 0 #default
+    worm_trigger = 0  # default
+    worm_trigger_counter = 0  # default
     last_checked_time = 0  # Initialize last check time
     check_interval = 5  # 3 seconds between checks
 
@@ -219,98 +236,89 @@ def automaticMissionControl():
     # Detect markers and their poses using the existing detectMarkers function
     corners, ids, tvecs = detectMarkers(gray)
 
-    #reset variables
-    current_target = path[i][j+1]
+    # reset variables
+    current_target = path[i][j + 1]
+
+    print("The current target is:", current_target)
 
     while i <= len(path):
         while j < len(path[i]):
-            executing_value = int(MQTTread("Executing"))
-            if executing_value == 0:    
-                while True:
-                    current_time = time.time()
+            #executing value is the last message received from the robot in background. When received_messages is empty, the executing value is 0 so it can enter the loop
+            if len(received_messages) > 0:
+                executing_value = received_messages[-1]
+            else:
+                executing_value = 0
 
-                    # Capture the current frame from the camera feed
-                    ret, frame = camera_feed.read()
-
-                    if not ret:
-                        print("Failed to capture frame.")
-                        break
-
-                    # Convert the frame to grayscale for ArUco detection
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-                    # Detect markers and their poses using the existing detectMarkers function
-                    corners, ids, tvecs = detectMarkers(gray)
-
-                    # Display the frame with detected markers and IDs
-                    if ids is not None:
-                        aruco.drawDetectedMarkers(frame, corners, ids)
-                    cv2.imshow('Mission Control Feed', frame)
-
-                    # Perform checks and operations only if the interval has passed
-                    if current_time - last_checked_time >= check_interval:
-                        last_checked_time = current_time  # Update last check time
-
-                    # Track BabySpice’s position (marker 4)
-                    if ids is not None and 4 in ids.flatten():
-                        marker_index = np.where(ids == 4)[0][0]
-                        marker_corners = corners[marker_index]
-
-                        # Calculate the center of the detected marker
-                        marker_center = np.mean(marker_corners[0], axis=0)
-                        marker_x, marker_y = int(marker_center[0]), int(marker_center[1])
-
-                        # Convert pixel position to grid coordinates
-                        grid_x = int((marker_x - min_x) / (pixels_per_cm_x * 5)) # grid_size is 5 cm
-                        grid_y = int((marker_y - min_y) / (pixels_per_cm_y * 5))
-
-                        # Update the current position of the robot
-                        current_pos = [grid_x, grid_y]
-
-                        # Calculate the orientation of the marker
-                        # The orientation can be determined by the angle of the line connecting two corners
-                        corner_0 = marker_corners[0][0]  # First corner
-                        corner_1 = marker_corners[0][1]  # Second corner
-                        dx = corner_1[0] - corner_0[0]
-                        dy = corner_1[1] - corner_0[1]
-                        angle = np.degrees(np.arctan2(dy, dx))
-                        # current orientation of the robot
-                        # round the angle to the nearest multiple of 90 degrees 
-                        current_dir = round(angle / 90) * 90
-                        # if output is 360, set it to 0
-                        if current_dir == 360:
-                            current_dir = 0
-                        
-                    else:
-                        print("BabySpice not detected - please put her in frame!")
-
-                        # Check if the sandworm (marker 5) is in frame
-                        sandworm_present = False
-                        if ids is not None:
-                            sandworm_present = 5 in ids.flatten()  # Check for sandworm marker
-
-                        if sandworm_present:
-                            worm_trigger = 1
-                            print ("Worm detected, redirecting to high ground")
-                        else:
-                            worm_trigger = 0
-
-                    # if q is pressed, exit the loop
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
+            if executing_value == 0:  
+                time.sleep(5)
+            
+                #zuza loop to get babyspice_pos and babyspice_dir and worm_trigger
+                
+                #reset variables
+                current_target = path[i][j+1]
+                #ask user to input the current position of the robot
+                current_pos = input("Please input the current position of the robot: ")
+                current_pos = current_pos.split(",")
+                current_pos = (int(current_pos[0]), int(current_pos[1]))
+                #ask user to input the current direction of the robot
+                current_dir = input("Please input the current direction of the robot: ")
+                current_dir = int(current_dir)
+                
+                allowable_target_range = [
+                    (current_target[0] + dx, current_target[1] + dy)
+                    for dx in range(-1, 2)
+                    for dy in range(-1, 2)
+                    ]
 
                 #check if the target has been reached
-                # current position can be within 1 cell of the target
-                # this is to account for any errors in the robot's movement
-                if current_pos[0] in range(current_target[0]-1, current_target[0]+2) and current_pos[1] in range(current_target[1]-1, current_target[1]+2):
+                if current_pos in allowable_target_range:  
+                    while True:
+                        current_time = time.time()
 
-                    #check if worm trigger is on
+                        # Capture the current frame from the camera feed
+                        ret, frame = camera_feed.read()
+
+                        if not ret:
+                            print("Failed to capture frame.")
+                            break
+
+                        # Convert the frame to grayscale for ArUco detection
+                        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+                        # Detect markers and their poses using the existing detectMarkers function
+                        corners, ids, tvecs = detectMarkers(gray)
+
+                        # Display the frame with detected markers and IDs
+                        if ids is not None:
+                            aruco.drawDetectedMarkers(frame, corners, ids)
+                        cv2.imshow('Mission Control Feed', frame)
+
+                        # Perform checks and operations only if the interval has passed
+                        if current_time - last_checked_time >= check_interval:
+                            last_checked_time = current_time  # Update last check time
+
+                        # Check if any sandworms are detected
+                        if (time.time() - last_checked_time) >= check_interval:
+                            last_checked_time = time.time()
+                            if ids is not None and 2 in ids.flatten():
+                                worm_trigger = 1
+                            else:
+                                worm_trigger = 0
+
+                        # Handle sandworm presence logic
+                        #check if worm trigger is on
                     if worm_trigger == 1:
                         worm_trigger_counter += 1
 
                         #check if it is the first time the worm trigger has been on
                         if  worm_trigger_counter == 1:
-                            
+
+                            #ask user to input the current position of the robot
+                            current_pos = input("Please input the current position of the robot: ")
+                            current_pos = current_pos.split(",")
+                            current_pos = [int(current_pos[0]), int(current_pos[1])]
+
+
                             #find closest high ground
                             distance_to_HG = []
                             for k in range(len(HG_targets)):
@@ -337,32 +345,44 @@ def automaticMissionControl():
                 #if the target has not been reached
                 else:
                     MOTOR_DIRECTIONS, RPM, TIME = CreateRobotCommands(current_pos, current_dir, current_target)
+
+                    Time_Units = int(TIME)
+                    Time_Decimals = int(round((TIME - Time_Units) * 100))
+                    
                     MQTTwrite("M1_Dir", MOTOR_DIRECTIONS[0])
                     MQTTwrite("M2_Dir", MOTOR_DIRECTIONS[1])
                     MQTTwrite("M1_RPM", RPM)
                     MQTTwrite("M2_RPM", RPM)
-                    MQTTwrite("TIME", TIME)
+                    MQTTwrite("Time_Units", Time_Units)
+                    MQTTwrite("Time_Decimals", Time_Decimals)
+                    
+                    #give robot time to update executing value
+                    time.sleep(5)
+
             else:
                 print("Waiting for robot to finish executing order")
+                time.sleep(5)
 
         print("Target reached, Collecting spice")
+            
+        #action to be performed when collecting spice
+        time.sleep(10)
+
         #move on to next target set
         i += 1
         j = 0
+                
 
-        # if q is pressed, exit the loop
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-                    
-        
     print("All spice collected and returned to start")
-
+                  
 
     # Release camera feed and close all OpenCV windows
     camera_feed.release()
     cv2.destroyAllWindows()
 
-
+# Ensure the script runs the automatic mission control when executed
 if __name__ == "__main__":
-     # This code will only run if this file is executed directly
-     automaticMissionControl()
+    semiAutomaticMissionControl()
+
+
+exit()
